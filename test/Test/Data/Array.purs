@@ -1,13 +1,20 @@
 module Test.Data.Array (testArray) where
 
 import Prelude
-import Control.Monad.Eff.Console (log)
-import Data.Array
-import Data.Maybe (Maybe(..), isNothing)
-import Data.Maybe.Unsafe (fromJust)
-import Data.Tuple (Tuple(..))
-import Test.Assert (assert)
 
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (log, CONSOLE)
+
+import Data.Array (range, foldM, unzip, zip, zipWithA, zipWith, intersectBy, intersect, (\\), deleteBy, delete, unionBy, union, nubBy, nub, groupBy, group', group, span, dropWhile, drop, takeWhile, take, sortBy, sort, catMaybes, mapMaybe, filterM, filter, concat, concatMap, reverse, alterAt, modifyAt, updateAt, deleteAt, insertAt, findLastIndex, findIndex, elemLastIndex, elemIndex, (!!), uncons, init, tail, last, head, insertBy, insert, snoc, (:), length, null, replicate, replicateM, singleton, fromFoldable)
+import Data.Foldable (for_, foldMapDefaultR, class Foldable, all)
+import Data.Maybe (Maybe(..), isNothing, fromJust)
+import Data.Tuple (Tuple(..))
+
+import Partial.Unsafe (unsafePartial)
+
+import Test.Assert (assert, ASSERT)
+
+testArray :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 testArray = do
 
   log "singleton should construct an array with a single value"
@@ -32,8 +39,8 @@ testArray = do
   assert $ replicateM (-1) (Just 1) == Just []
 
   log "replicateM should be stack safe"
-  let n = 50000
-  assert $ replicateM n (Just unit) == Just (replicate n unit)
+  for_ [1, 1000, 2000, 20000, 50000] \n -> do
+    assert $ replicateM n (Just unit) == Just (replicate n unit)
 
   -- some
   -- many
@@ -97,11 +104,11 @@ testArray = do
 
   log "uncons should split an array into a head and tail record when there is at least one item"
   let u1 = uncons [1]
-  assert $ (fromJust u1).head == 1
-  assert $ (fromJust u1).tail == []
+  assert $ (unsafePartial $ fromJust u1).head == 1
+  assert $ (unsafePartial $ fromJust u1).tail == []
   let u2 = uncons [1, 2, 3]
-  assert $ (fromJust u2).head == 1
-  assert $ (fromJust u2).tail == [2, 3]
+  assert $ (unsafePartial $ fromJust u2).head == 1
+  assert $ (unsafePartial $ fromJust u2).tail == [2, 3]
 
   log "(!!) should return Just x when the index is within the bounds of the array"
   assert $ [1, 2, 3] !! 0 == (Just 1)
@@ -121,12 +128,12 @@ testArray = do
   assert $ (elemLastIndex 4 [1, 2, 1]) == Nothing
 
   log "findIndex should return the index of an item that a predicate returns true for in an array"
-  assert $ (findIndex (/= 1) [1, 2, 1]) == Just 1
-  assert $ (findIndex (== 3) [1, 2, 1]) == Nothing
+  assert $ (findIndex (_ /= 1) [1, 2, 1]) == Just 1
+  assert $ (findIndex (_ == 3) [1, 2, 1]) == Nothing
 
   log "findLastIndex should return the last index of an item in an array"
-  assert $ (findLastIndex (/= 1) [2, 1, 2]) == Just 2
-  assert $ (findLastIndex (== 3) [2, 1, 2]) == Nothing
+  assert $ (findLastIndex (_ /= 1) [2, 1, 2]) == Just 2
+  assert $ (findLastIndex (_ == 3) [2, 1, 2]) == Nothing
 
   log "insertAt should add an item at the specified index"
   assert $ (insertAt 0 1 [2, 3]) == Just [1, 2, 3]
@@ -151,11 +158,11 @@ testArray = do
   assert $ (updateAt 1 9 nil) == Nothing
 
   log "modifyAt should update an item at the specified index"
-  assert $ (modifyAt 0 (+ 1) [1, 2, 3]) == Just [2, 2, 3]
-  assert $ (modifyAt 1 (+ 1) [1, 2, 3]) == Just [1, 3, 3]
+  assert $ (modifyAt 0 (_ + 1) [1, 2, 3]) == Just [2, 2, 3]
+  assert $ (modifyAt 1 (_ + 1) [1, 2, 3]) == Just [1, 3, 3]
 
   log "modifyAt should return Nothing if the index is out of range"
-  assert $ (modifyAt 1 (+ 1) nil) == Nothing
+  assert $ (modifyAt 1 (_ + 1) nil) == Nothing
 
   log "alterAt should update an item at the specified index when the function returns Just"
   assert $ (alterAt 0 (Just <<< (+ 1)) [1, 2, 3]) == Just [2, 2, 3]
@@ -205,9 +212,9 @@ testArray = do
   assert $ (take 1 nil) == nil
 
   log "takeWhile should keep all values that match a predicate from the front of an array"
-  assert $ (takeWhile (/= 2) [1, 2, 3]) == [1]
-  assert $ (takeWhile (/= 3) [1, 2, 3]) == [1, 2]
-  assert $ (takeWhile (/= 1) nil) == nil
+  assert $ (takeWhile (_ /= 2) [1, 2, 3]) == [1]
+  assert $ (takeWhile (_ /= 3) [1, 2, 3]) == [1, 2]
+  assert $ (takeWhile (_ /= 1) nil) == nil
 
   log "drop should remove the specified number of items from the front of an array"
   assert $ (drop 1 [1, 2, 3]) == [2, 3]
@@ -215,12 +222,16 @@ testArray = do
   assert $ (drop 1 nil) == nil
 
   log "dropWhile should remove all values that match a predicate from the front of an array"
-  assert $ (dropWhile (/= 1) [1, 2, 3]) == [1, 2, 3]
-  assert $ (dropWhile (/= 2) [1, 2, 3]) == [2, 3]
-  assert $ (dropWhile (/= 1) nil) == nil
+  assert $ (dropWhile (_ /= 1) [1, 2, 3]) == [1, 2, 3]
+  assert $ (dropWhile (_ /= 2) [1, 2, 3]) == [2, 3]
+  assert $ (dropWhile (_ /= 1) nil) == nil
+
+  log "take and drop should treat negative arguments as zero"
+  assert $ (take (-2) [1, 2, 3]) == nil
+  assert $ (drop (-2) [1, 2, 3]) == [1, 2, 3]
 
   log "span should split an array in two based on a predicate"
-  let spanResult = span (< 4) [1, 2, 3, 4, 5, 6, 7]
+  let spanResult = span (_ < 4) [1, 2, 3, 4, 5, 6, 7]
   assert $ spanResult.init == [1, 2, 3]
   assert $ spanResult.rest == [4, 5, 6, 7]
 
@@ -280,6 +291,17 @@ testArray = do
   assert $ foldM (\x y -> Just (x + y)) 0 (range 1 10) == Just 55
   assert $ foldM (\_ _ -> Nothing) 0 (range 1 10) == Nothing
 
+  log "fromFoldable"
+  for_ [[], [1], [1,2], [1,2,3,4,5]] \xs -> do
+    assert $ fromFoldable xs == xs
+
+  log "fromFoldable is stack safe"
+  for_ [1, 1000, 10000, 20000, 50000] \n -> do
+    let elem = 0
+    let arr = fromFoldable (Replicated n elem)
+    assert $ length arr == n
+    assert $ all (_ == elem) arr
+
 nil :: Array Int
 nil = []
 
@@ -288,3 +310,15 @@ odd n = n `mod` 2 /= zero
 
 doubleAndOrig :: Int -> Array Int
 doubleAndOrig x = [x * 2, x]
+
+data Replicated a = Replicated Int a
+
+instance foldableReplicated :: Foldable Replicated where
+  foldr f z (Replicated n x) = applyN n (f x) z
+  foldl f z (Replicated n x) = applyN n (flip f x) z
+  foldMap = foldMapDefaultR
+
+applyN :: forall a. Int -> (a -> a) -> a -> a
+applyN n f x
+  | n <= 0    = x
+  | otherwise = applyN (n - 1) f (f x)

@@ -1,15 +1,18 @@
 module Test.Data.Array.ST (testArrayST) where
 
 import Prelude
-import Control.Monad.Eff.Console (log, print)
-import Control.Monad.Eff (runPure)
+
+import Control.Monad.Eff (runPure, Eff)
+import Control.Monad.Eff.Console (log, CONSOLE)
 import Control.Monad.ST (runST)
-import Data.Array ()
-import Data.Array.ST
+
+import Data.Array.ST (toAssocArray, thaw, spliceSTArray, runSTArray, pokeSTArray, emptySTArray, peekSTArray, pushAllSTArray, pushSTArray, freeze)
 import Data.Foldable (all)
 import Data.Maybe (Maybe(..), isNothing)
-import Test.Assert (assert)
 
+import Test.Assert (assert, ASSERT)
+
+testArrayST :: forall eff. Eff (console :: CONSOLE, assert :: ASSERT | eff) Unit
 testArrayST = do
 
   log "emptySTArray should produce an empty array"
@@ -32,24 +35,24 @@ testArrayST = do
     arr <- emptySTArray
     pushSTArray arr 1
     pushSTArray arr 2
-    return arr)) == [1, 2]
+    pure arr)) == [1, 2]
 
   assert $ runPure (runSTArray (do
     arr <- thaw [1, 2, 3]
     pushSTArray arr 4
-    return arr)) == [1, 2, 3, 4]
+    pure arr)) == [1, 2, 3, 4]
 
   log "pushAllSTArray should append multiple values to the end of the array"
 
   assert $ runPure (runSTArray (do
     arr <- emptySTArray
     pushAllSTArray arr [1, 2]
-    return arr)) == [1, 2]
+    pure arr)) == [1, 2]
 
   assert $ runPure (runSTArray (do
     arr <- thaw [1, 2, 3]
     pushAllSTArray arr [4, 5, 6]
-    return arr)) == [1, 2, 3, 4, 5, 6]
+    pure arr)) == [1, 2, 3, 4, 5, 6]
 
   log "peekSTArray should return Nothing when peeking a value outside the array bounds"
 
@@ -104,21 +107,21 @@ testArrayST = do
   assert $ runPure (runSTArray (do
     arr <- thaw [1]
     pokeSTArray arr 0 10
-    return arr)) == [10]
+    pure arr)) == [10]
 
   log "pokeSTArray should do nothing when attempting to modify a value outside the array bounds"
 
   assert $ runPure (runSTArray (do
     arr <- thaw [1]
     pokeSTArray arr 1 2
-    return arr)) == [1]
+    pure arr)) == [1]
 
   log "spliceSTArray should be able to delete multiple items at a specified index"
 
   assert $ runPure (runSTArray (do
     arr <- thaw [1, 2, 3, 4, 5]
     spliceSTArray arr 1 3 []
-    return arr)) == [1, 5]
+    pure arr)) == [1, 5]
 
   log "spliceSTArray should return the items removed"
 
@@ -131,14 +134,14 @@ testArrayST = do
   assert $ runPure (runSTArray (do
     arr <- thaw [1, 2, 3, 4, 5]
     spliceSTArray arr 1 0 [0, 100]
-    return arr)) == [1, 0, 100, 2, 3, 4, 5]
+    pure arr)) == [1, 0, 100, 2, 3, 4, 5]
 
   log "spliceSTArray should be able to delete and insert at the same time"
 
   assert $ runPure (runSTArray (do
     arr <- thaw [1, 2, 3, 4, 5]
     spliceSTArray arr 1 2 [0, 100]
-    return arr)) == [1, 0, 100, 4, 5]
+    pure arr)) == [1, 0, 100, 4, 5]
 
   log "toAssocArray should return all items in the array with the correct indices and values"
 

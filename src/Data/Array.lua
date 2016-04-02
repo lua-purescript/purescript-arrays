@@ -32,6 +32,14 @@ Data_Array.replicate = function (n)
   end
 end
 
+Data_Array.fromFoldableImpl = (function ()
+  return function (foldr)
+    return function (xs)
+      error("Not implemented: fromFodableImpl")
+    end
+  end
+end)()
+
 //------------------------------------------------------------------------------
 // Array size ------------------------------------------------------------------
 //------------------------------------------------------------------------------
@@ -224,6 +232,12 @@ Data_Array.slice = function (s)
     return function (l)
       return sliceTbl(l, s, e)
     end
+  end
+end
+
+Data_Array.take = function (n) 
+  return function (l)
+    return n < 1 and {} or sliceTbl(l, 0, n)
   end
 end
 

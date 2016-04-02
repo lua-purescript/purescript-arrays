@@ -36,8 +36,8 @@ end
 ST.pushAllSTArray = function (xs)
   return function (as)
     return function ()
-	  error("Not implemented: pushAllSTArray")
-      return xs.push.apply(xs, as) -- TODO
+      error("Not implemented: pushAllSTArray")
+      -- return xs.push.apply(xs, as) -- TODO
     end
   end
 end
@@ -48,7 +48,7 @@ ST.spliceSTArray = function (xs)
       return function (bs)
         return function ()
           error("Not implemented: spliceSTArray")
-          return xs.splice.apply(xs, [i, howMany].concat(bs)) -- TODO
+          -- return xs.splice.apply(xs, [i, howMany].concat(bs)) -- TODO
         end
       end
     end
