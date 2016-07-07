@@ -21,17 +21,6 @@ Data_Array.range = function (start)
   end
 end
 
-Data_Array.replicate = function (n)
-  return function (v)
-    if (n < 1) then return {} end
-    local r = {}
-    for i = 1, n do
-      r[i] = v
-    end
-    return r
-  end
-end
-
 Data_Array.fromFoldableImpl = (function ()
   return function (foldr)
     return function (xs)
